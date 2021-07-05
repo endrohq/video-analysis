@@ -1,0 +1,6 @@
+.env
+.idea
+__pychache__/
+storage
+
+rds-combined-ca-bundle.*
