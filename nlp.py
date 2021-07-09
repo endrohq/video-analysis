@@ -14,7 +14,7 @@ def get_ner_and_verbs(text):
     entities = []
     # Find named entities, phrases and concepts
     for entity in doc.ents:
-        entities.append({"entity": entity.text, "type": entity.label_})
+        entities.append({"entity": entity.text, "entityType": entity.label_})
 
     return {
         "entities": entities,
