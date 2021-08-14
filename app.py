@@ -1,12 +1,9 @@
-
 import os
-import uuid
 
-import cv2
-
-from flask import Flask, send_from_directory, request
+from flask import Flask, request
 from flask_cors import cross_origin
 
+from helpers import download_file
 from nlp import get_ner_and_verbs
 from transform import get_video_labels
 
@@ -18,50 +15,26 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-@app.route('/cdn/videos/<id>', methods=['GET'])
+@app.route('/api/files/<cid>/context', methods=['POST'])
 @cross_origin()
-def retrieve_video(id):
-    video_path = id + '.mp4'
-    return send_from_directory('./storage/videos', video_path)
+def annotate_video(cid):
 
+    content = request.json
 
-@app.route('/cdn/images/<id>', methods=['GET'])
-@cross_origin()
-def retrieve_image(id):
-    video_path = id + '.jpg'
-    return send_from_directory('./storage/images', video_path)
+    ipfs_url = 'https://ipfs.io' + content['ipfsPath']
+    temporary_path = os.path.join('temporary')
+    local_filename = download_file(ipfs_url, temporary_path)
 
-
-@app.route('/process', methods=['POST'])
-@cross_origin()
-def process():
-
-    media_id = str(uuid.uuid4())
-    video_id = media_id + '.mp4'
-    image_id = media_id + '.jpg'
-
-    # 'UPLOAD' videos
-    file = request.files['file']
-    video_path = os.path.join('./storage/videos', video_id)
-    file.save(video_path)
-
-    # 'UPLOAD' first frame for video previews
-    image_path = os.path.join('./storage/images', image_id)
-    cap = cv2.VideoCapture(video_path)
-    success,image = cap.read()
-    if success:
-        cv2.imwrite(image_path, image)
-
+    local_path = os.path.join('temporary', local_filename)
     # Extract video labels via Pytorch video
-    labels = get_video_labels(video_path)
+    labels = get_video_labels(local_path)
 
     return {
-        "mediaId": media_id,
         "labels": labels
     }
 
 
-@app.route('/annotate', methods=['POST'])
+@app.route('/api/annotate', methods=['POST'])
 @cross_origin()
 def annotate_text():
     content = request.json
